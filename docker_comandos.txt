@@ -1,0 +1,10 @@
+# browser-POS — Docker
+# O compose atual usa ./data para o SQLite e ./staticfiles para os estáticos.
+
+docker compose build
+docker compose up -d
+docker compose logs -f web
+docker compose down
+
+# Não há push/publish automático. Não publique imagens com .env ou banco.
+# Antes de subir, revise .env, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS e HTTPS.

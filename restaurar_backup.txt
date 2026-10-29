@@ -1,0 +1,15 @@
+# Restauração de ambiente Python (sem apagar banco)
+cd ~/browser-POS
+
+# Preserve o banco e o .env. Este procedimento só recria a venv.
+mv venv venv.old-$(date +%Y%m%d-%H%M%S)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+python manage.py check
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+python manage.py test -v 2
+
+# Depois de validar, remova manualmente a venv antiga se desejar.

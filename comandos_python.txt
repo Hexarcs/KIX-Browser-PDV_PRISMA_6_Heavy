@@ -1,0 +1,17 @@
+# browser-POS — execução local
+source venv/bin/activate
+
+python manage.py check
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+python manage.py test -v 2
+python manage.py runserver
+
+# Em produção, use gunicorn em vez do runserver:
+# gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 2
+
+# Serviço systemd de exemplo (ajuste usuário/caminho):
+# [Service]
+# WorkingDirectory=/home/zeloko/browser-POS
+# ExecStart=/home/zeloko/browser-POS/venv/bin/gunicorn core.wsgi:application --bind 127.0.0.1:8000 --workers 2
+# Restart=always

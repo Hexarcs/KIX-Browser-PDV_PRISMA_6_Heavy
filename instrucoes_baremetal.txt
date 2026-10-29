@@ -1,0 +1,23 @@
+browser-POS — instalação bare metal
+
+1. Crie o .env a partir de .env.example:
+   cp .env.example .env
+   chmod 600 .env
+
+2. Preencha SECRET_KEY, LNBITS_URL e LNBITS_API_KEY.
+   NUNCA versione o .env nem cole a chave em arquivos de documentação.
+
+3. Instale as dependências:
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+
+4. Prepare o banco e os estáticos:
+   python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
+
+5. Rode:
+   python manage.py runserver
+   # ou use gunicorn atrás de HTTPS.
+
+Consulte README.md para variáveis e segurança.

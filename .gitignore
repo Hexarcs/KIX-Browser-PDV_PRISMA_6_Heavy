@@ -1,0 +1,23 @@
+venv/
+*.sqlite3
+*.sqlite3.bak*
+*.db
+__pycache__/
+media/
+staticfiles/
+logs/
+logs.root-owned/
+.env
+client_secret_*.json
+criar_loja_8007.sh
+hexarcs_store/docker-compose.yml
+copydatabase.txt
+
+# artefatos locais / ativos antigos não usados pelo POS
+*.log
+*.swp
+GIT_COMMIT.TXT
+core/rawmaterial/
+core/static/images/
+core/static/img/favicon_cart_kix.png
+imagem.bmp

@@ -1,0 +1,218 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <title>browser-POS · Lightning</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/pos-favicon.svg' %}">
+    <link rel="stylesheet" href="{% static 'css/pos.css' %}">
+</head>
+<body>
+<div class="app-shell">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark" aria-hidden="true">⚡</span>
+            <span class="brand-name">browser-POS</span>
+        </div>
+        <div class="network-badge">
+            <span class="network-dot" aria-hidden="true"></span>
+            Lightning Network
+        </div>
+    </header>
+
+    {% if not payments_ready %}
+    <div class="config-warning" role="alert">
+        O serviço de pagamentos não está configurado. Defina
+        <code>LNBITS_URL</code> e <code>LNBITS_API_KEY</code> no servidor.
+    </div>
+    {% endif %}
+
+    <main
+        id="terminal"
+        class="terminal"
+        data-min-sats="{{ min_sats }}"
+        data-max-sats="{{ max_sats }}"
+        data-payments-ready="{% if payments_ready %}true{% else %}false{% endif %}"
+    >
+        <section class="panel charge-panel" aria-labelledby="charge-title">
+            <div class="panel-heading">
+                <div>
+                    <p class="eyebrow">Nova cobrança</p>
+                    <h1 id="charge-title">Valor em satoshis</h1>
+                </div>
+                <span id="state-badge" class="state-badge" data-state="ready">Pronto</span>
+            </div>
+
+            <output
+                id="amount-display"
+                class="amount-display"
+                aria-live="polite"
+                aria-atomic="true"
+                tabindex="0"
+            >
+                <span id="amount-value">0</span>
+                <span class="amount-unit">sats</span>
+            </output>
+
+            <p id="amount-hint" class="hint">
+                Digite um inteiro entre {{ min_sats_display }} e {{ max_sats_display }} sats.
+                Sem conversão, sem casas decimais.
+            </p>
+
+            <div class="keypad" role="group" aria-label="Teclado numérico">
+                <button type="button" class="key" data-digit="1" aria-label="1">1</button>
+                <button type="button" class="key" data-digit="2" aria-label="2">2</button>
+                <button type="button" class="key" data-digit="3" aria-label="3">3</button>
+                <button type="button" class="key" data-digit="4" aria-label="4">4</button>
+                <button type="button" class="key" data-digit="5" aria-label="5">5</button>
+                <button type="button" class="key" data-digit="6" aria-label="6">6</button>
+                <button type="button" class="key" data-digit="7" aria-label="7">7</button>
+                <button type="button" class="key" data-digit="8" aria-label="8">8</button>
+                <button type="button" class="key" data-digit="9" aria-label="9">9</button>
+                <button type="button" class="key key-utility" data-action="clear" aria-label="Limpar valor">C</button>
+                <button type="button" class="key" data-digit="0" aria-label="0">0</button>
+                <button type="button" class="key key-utility" data-action="backspace" aria-label="Apagar último dígito">⌫</button>
+            </div>
+
+            <button id="generate-btn" type="button" class="btn btn-primary btn-generate" disabled>
+                Gerar fatura Lightning
+            </button>
+
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+
+            <p class="shortcuts">
+                Teclado: <kbd>0–9</kbd> digitar · <kbd>Backspace</kbd> apagar ·
+                <kbd>Enter</kbd> gerar
+            </p>
+        </section>
+
+        <section id="invoice-panel" class="panel invoice-panel" aria-live="polite">
+            <div id="screen-empty" class="invoice-state screen-empty">
+                <div class="empty-mark" aria-hidden="true">⚡</div>
+                <h2>Aguardando cobrança</h2>
+                <p>Digite o valor em satoshis e gere uma fatura Lightning.</p>
+            </div>
+
+            <div id="screen-generating" class="invoice-state" hidden>
+                <span class="spinner" aria-hidden="true"></span>
+                <h2>Gerando fatura</h2>
+                <p>Contactando o serviço de pagamentos…</p>
+            </div>
+
+            <div id="screen-waiting" class="invoice-state screen-waiting" hidden>
+                <div class="invoice-summary">
+                    <span class="invoice-label">Total a cobrar</span>
+                    <strong id="invoice-amount">0 sats</strong>
+                </div>
+
+                <div class="qr-frame">
+                    <img
+                        id="qr-image"
+                        alt="QR code para pagar a fatura Lightning"
+                        width="288"
+                        height="288"
+                    >
+                </div>
+
+                <div class="waiting-line">
+                    <span class="pulse-dot" aria-hidden="true"></span>
+                    <span id="waiting-label">Aguardando pagamento</span>
+                </div>
+                <p id="expiry-text" class="muted"></p>
+                <p id="connection-notice" class="connection-notice" role="status" hidden></p>
+
+                <div class="bolt11-box">
+                    <div class="bolt11-head">
+                        <label for="invoice-code">Fatura BOLT11</label>
+                        <button id="copy-btn" type="button" class="btn btn-small">Copiar</button>
+                    </div>
+                    <textarea
+                        id="invoice-code"
+                        rows="3"
+                        readonly
+                        spellcheck="false"
+                        aria-describedby="copy-hint"
+                    ></textarea>
+                    <span id="copy-hint" class="sr-only">
+                        Código completo da fatura Lightning para pagamento.
+                    </span>
+                </div>
+
+                <button id="abandon-btn" type="button" class="btn btn-ghost">
+                    Abandonar cobrança
+                </button>
+                <p class="tiny">
+                    Abandonar não invalida a fatura no serviço de pagamentos.
+                </p>
+            </div>
+
+            <div id="screen-paid" class="invoice-state screen-result screen-paid" hidden>
+                <div class="result-mark result-mark-paid" aria-hidden="true">✓</div>
+                <p class="eyebrow">Pagamento confirmado</p>
+                <h2>PAGO</h2>
+                <p id="paid-amount" class="result-amount">0 sats</p>
+                <p class="muted">Recebido via Lightning Network.</p>
+                <button id="new-charge-btn" type="button" class="btn btn-primary">
+                    Nova cobrança
+                </button>
+            </div>
+
+            <div id="screen-expired" class="invoice-state screen-result" hidden>
+                <div class="result-mark result-mark-expired" aria-hidden="true">⌛</div>
+                <p class="eyebrow">Cobrança encerrada</p>
+                <h2>Fatura expirada</h2>
+                <p class="muted">
+                    O prazo desta fatura terminou. Antes de cobrar novamente,
+                    verifique se o pagamento chegou.
+                </p>
+                <button id="expired-check-btn" type="button" class="btn btn-secondary">
+                    Verificar pagamento
+                </button>
+                <button id="expired-new-btn" type="button" class="btn btn-primary">
+                    Nova cobrança
+                </button>
+            </div>
+
+            <div id="screen-cancelled" class="invoice-state screen-result" hidden>
+                <div class="result-mark result-mark-cancelled" aria-hidden="true">×</div>
+                <p class="eyebrow">Operação encerrada</p>
+                <h2>Cobrança abandonada</h2>
+                <p class="muted">
+                    A fatura anterior continua válida no serviço até expirar.
+                </p>
+                <button id="cancelled-back-btn" type="button" class="btn btn-primary">
+                    Voltar ao terminal
+                </button>
+            </div>
+
+            <div id="screen-error" class="invoice-state screen-result" hidden>
+                <div class="result-mark result-mark-error" aria-hidden="true">!</div>
+                <p class="eyebrow">Falha</p>
+                <h2>Não foi possível gerar a fatura</h2>
+                <p id="error-message" class="muted" role="alert"></p>
+                <button id="error-retry-btn" type="button" class="btn btn-primary">
+                    Tentar novamente
+                </button>
+                <button id="error-back-btn" type="button" class="btn btn-ghost">
+                    Voltar
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        Pagamentos exclusivamente em satoshis pela Lightning Network.
+    </footer>
+</div>
+
+<noscript>
+    <p class="noscript">Este terminal precisa de JavaScript habilitado.</p>
+</noscript>
+
+<script src="{% static 'vendor/qrcode.js' %}" defer></script>
+<script src="{% static 'js/pos.js' %}" defer></script>
+</body>
+</html>

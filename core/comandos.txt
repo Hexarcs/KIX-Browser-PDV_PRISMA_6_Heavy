@@ -1,0 +1,3 @@
+# Notas operacionais antigas removidas.
+# Consulte README.md, comandos_python.txt e instrucoes_baremetal.txt.
+# Credenciais, hosts e chaves privadas não devem ser versionados.
